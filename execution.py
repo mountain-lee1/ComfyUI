@@ -9,6 +9,7 @@ import traceback
 from enum import Enum
 from typing import List, Literal, NamedTuple, Optional
 import asyncio
+import multiprocessing
 
 import torch
 
@@ -33,6 +34,9 @@ from comfy_execution.validation import validate_node_input
 from comfy_execution.progress import get_progress_state, reset_progress_state, add_progress_handler, WebUIProgressHandler
 from comfy_execution.utils import CurrentNodeContext
 
+manager = multiprocessing.Manager()
+shared_dict = manager.dict()
+shared_dict['Image_Node'] = 0
 
 class ExecutionResult(Enum):
     SUCCESS = 0
@@ -582,6 +586,7 @@ class PromptExecutor:
         asyncio.run(self.execute_async(prompt, prompt_id, extra_data, execute_outputs))
 
     async def execute_async(self, prompt, prompt_id, extra_data={}, execute_outputs=[]):
+        shared_dict['Image_Node'] = sum(1 for node in prompt.values() if isinstance(node, dict) and node.get("class_type") == "LoadImage")
         nodes.interrupt_processing(False)
 
         if "client_id" in extra_data:
